@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="battleship/battleship.vcxproj" />
+  <Project Path="battleship/battleship.vcxproj" Id="45469d18-ce51-47ca-8bba-088e1e00f1d4" />
 </Solution>
