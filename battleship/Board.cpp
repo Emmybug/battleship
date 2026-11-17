@@ -1,14 +1,13 @@
-//Contains the actual implementation of the Board class functions
-//Functions in board.h are implemented here in board.cpp
 
 #include "Board.h"
+#include <cctype>
 
-// Constructor - initialize the board when created, runs auto when an object is created
+// Constructor - initialize the board when it is created
 Board::Board() {
     initialize();
 }
 
-// Fill the board with water
+// Function to initialize the game board with water ('~')
 void Board::initialize() {
     for (int i = 0; i < 10; i++) {
         for (int j = 0; j < 10; j++) {
@@ -17,8 +16,7 @@ void Board::initialize() {
     }
 }
 
-// Display the board with colors, uses nested for loops. Out=row, in=column
-//fleet is the paramter to determine the color of the ships
+// Function to print the game board
 void Board::print(Ship fleet[5]) const {
     cout << "   A B C D E F G H I J" << endl;
 
@@ -38,7 +36,6 @@ void Board::print(Ship fleet[5]) const {
                 cout << RESET << cell << " ";
             }
             else {
-                // Find the color for the ship
                 string shipColor = RESET;
 
                 for (int k = 0; k < 5; k++) {
@@ -56,38 +53,31 @@ void Board::print(Ship fleet[5]) const {
     }
 }
 
-// Check whether a ship placement is valid
+// Function to check if the ship placement is valid
 bool Board::isValidPlacement(int row, int col,
     int size, char orientation) const {
 
     orientation = static_cast<char>(toupper(orientation));
 
-    // Check orientation
     if (orientation != 'H' && orientation != 'V') {
         return false;
     }
 
-    // Check starting position and ship size
     if (row < 0 || row >= 10 ||
         col < 0 || col >= 10 || size <= 0) {
         return false;
     }
 
-    // Check horizontal placement
     if (orientation == 'H') {
         for (int j = 0; j < size; j++) {
-
             if (col + j >= 10 ||
                 grid[row][col + j] != WATER) {
                 return false;
             }
         }
     }
-
-    // Check vertical placement
-    else {
+    else if (orientation == 'V') {
         for (int j = 0; j < size; j++) {
-
             if (row + j >= 10 ||
                 grid[row + j][col] != WATER) {
                 return false;
@@ -98,11 +88,10 @@ bool Board::isValidPlacement(int row, int col,
     return true;
 }
 
-// Place a ship on the board
+// Function to place a ship after checking its position
 bool Board::placeShip(int row, int col,
     Ship ship, char orientation) {
 
-    // Reject invalid placements
     if (!isValidPlacement(row, col,
         ship.size, orientation)) {
         return false;
@@ -110,15 +99,13 @@ bool Board::placeShip(int row, int col,
 
     char shipSymbol = ship.name[0];
 
-    orientation = static_cast<char>(toupper(orientation));
-
-    // Place ship sections
-    for (int j = 0; j < ship.size; j++) {
-
-        if (orientation == 'H') {
+    if (toupper(orientation) == 'H') {
+        for (int j = 0; j < ship.size; j++) {
             grid[row][col + j] = shipSymbol;
         }
-        else {
+    }
+    else {
+        for (int j = 0; j < ship.size; j++) {
             grid[row + j][col] = shipSymbol;
         }
     }
@@ -126,7 +113,7 @@ bool Board::placeShip(int row, int col,
     return true;
 }
 
-// Check whether a position was already attacked
+// Function to check whether a location was already attacked
 bool Board::wasAttacked(int row, int col) const {
 
     if (row < 0 || row >= 10 ||
@@ -138,20 +125,17 @@ bool Board::wasAttacked(int row, int col) const {
         grid[row][col] == MISS;
 }
 
-// Receive an attack and return true for a hit
+// Function to receive an attack
 bool Board::receiveAttack(int row, int col) {
 
-    // Reject invalid or previously attacked positions
     if (row < 0 || row >= 10 ||
         col < 0 || col >= 10 ||
         wasAttacked(row, col)) {
         return false;
     }
 
-    // Determine whether a ship was hit
     bool hit = grid[row][col] != WATER;
 
-    // Record hit or miss
     if (hit) {
         grid[row][col] = HIT;
     }
@@ -162,7 +146,7 @@ bool Board::receiveAttack(int row, int col) {
     return hit;
 }
 
-// Record the result on a tracking board
+// Function to record an attack on a tracking board
 void Board::markShot(int row, int col, bool hit) {
 
     if (row < 0 || row >= 10 ||
@@ -178,7 +162,7 @@ void Board::markShot(int row, int col, bool hit) {
     }
 }
 
-// Return the character stored at a position, remembers which ship was hit before attacked
+// Function to return a board character
 char Board::getCell(int row, int col) const {
 
     if (row < 0 || row >= 10 ||
@@ -189,7 +173,7 @@ char Board::getCell(int row, int col) const {
     return grid[row][col];
 }
 
-// Check whether any undamaged ships remain
+// Function to check if any ships are left
 bool Board::hasShipsRemaining() const {
 
     for (int i = 0; i < 10; i++) {
@@ -198,7 +182,6 @@ bool Board::hasShipsRemaining() const {
             if (grid[i][j] != WATER &&
                 grid[i][j] != HIT &&
                 grid[i][j] != MISS) {
-
                 return true;
             }
         }

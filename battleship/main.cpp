@@ -1,135 +1,116 @@
-//Starts the program, creates the boards, manages turns and determines the winners.
 
-#include "Board.h" //Defines the Board class 
-#include "computer.h" //Declares computer ship placement and attack functions
-#include <cstdlib> // For rand() and srand()
-#include <ctime> // For time functions
+#include "Board.h"
+#include "computer.h"
+#include <cstdlib>
+#include <ctime>
 
 int main() {
 
     // Initialize the random number generator
     srand(static_cast<unsigned int>(time(0)));
 
-    // Create the human player's boards
+    // Define the game boards for the player and computer
     Board playerShipBoard;
     Board playerTrackingBoard;
-
-    // Create the computer's boards
     Board computerShipBoard;
     Board computerTrackingBoard;
-
-    // Create the human player's fleet
-    Ship playerFleet[5] = {
-        { "Carrier", 5, 0, false, PURPLE },
-        { "Battleship", 4, 0, false, YELLOW },
-        { "Destroyer", 3, 0, false, GREEN },
-        { "Submarine", 3, 0, false, PINK },
-        { "Patrol Boat", 2, 0, false, ORANGE }
-    };
-
-    // Create the computer's fleet
-    Ship computerFleet[5] = {
-        { "Carrier", 5, 0, false, PURPLE },
-        { "Battleship", 4, 0, false, YELLOW },
-        { "Destroyer", 3, 0, false, GREEN },
-        { "Submarine", 3, 0, false, PINK },
-        { "Patrol Boat", 2, 0, false, ORANGE }
-    };
 
     bool gameOver = false;
     bool playerTurn = true;
 
-    // Welcome message
-    cout << "Welcome to Battleship!\n";
-    cout << "Let's set up your board!\n";
+    // Define the fleet of ships for the player
+    Ship fleet[5] = {
+        {"Carrier", 5, 0, false, PURPLE},
+        {"Battleship", 4, 0, false, YELLOW},
+        {"Destroyer", 3, 0, false, GREEN},
+        {"Submarine", 3, 0, false, PINK},
+        {"Patrol Boat", 2, 0, false, ORANGE}
+    };
 
-    // Set up the player's ships
-    boardSetup(playerShipBoard, playerFleet);
+    // Define a separate fleet for the computer
+    Ship computerFleet[5] = {
+        {"Carrier", 5, 0, false, PURPLE},
+        {"Battleship", 4, 0, false, YELLOW},
+        {"Destroyer", 3, 0, false, GREEN},
+        {"Submarine", 3, 0, false, PINK},
+        {"Patrol Boat", 2, 0, false, ORANGE}
+    };
 
-    // Exit if input was closed during setup
+    // Game setup phase
+    cout << "Welcome to Battleship! "
+        << "Let's set up your board!"
+        << endl << endl;
+
+    boardSetup(playerShipBoard, fleet);
+
     if (!cin) {
         return 0;
     }
 
-    // Randomly place the computer's ships
     placeComputerShips(computerShipBoard, computerFleet);
 
-    // DEBUG ONLY:
-    // Uncomment these two lines to reveal enemy ships.
-    // cout << "\n--- COMPUTER BOARD (DEBUG) ---\n";
+    // Uncomment to see the computer's ships during testing:
+    // cout << "\nCOMPUTER BOARD (DEBUG):\n";
     // computerShipBoard.print(computerFleet);
 
     // Main game loop
     while (!gameOver && cin) {
 
-        // Human player's turn
         if (playerTurn) {
 
             cout << "\n---------- PLAYER TURN ----------\n";
 
-            // Display tracking board
             cout << "\nYour tracking board:\n";
-            playerTrackingBoard.print(playerFleet);
+            playerTrackingBoard.print(fleet);
 
-            // Display player's ship board
             cout << "\nYour ship board:\n";
-            playerShipBoard.print(playerFleet);
+            playerShipBoard.print(fleet);
 
-            // Human attacks the computer
+            // Receive player's shot input
             bool hit = attack(
                 playerTrackingBoard,
                 computerShipBoard,
                 computerFleet);
 
-            // Stop if input was closed
             if (!cin) {
                 break;
             }
 
-            // Check whether computer has lost all ships
+            // Check if all computer ships are destroyed
             if (!computerShipBoard.hasShipsRemaining()) {
 
                 cout << GREEN
-                    << "\nYou win! "
-                    << "All enemy ships destroyed!\n"
+                    << "\nYou win! All enemy ships have been destroyed!\n"
                     << RESET;
 
                 gameOver = true;
             }
-
-            // If hit, human gets another turn
             else if (hit) {
 
                 cout << GREEN
                     << "You hit a ship! Go again!\n"
                     << RESET;
             }
-
-            // If miss, switch to computer turn
             else {
 
                 cout << "You missed! Computer's turn.\n";
-
                 playerTurn = false;
             }
         }
-
-        // Computer's turn
         else {
 
             cout << "\n---------- COMPUTER TURN ----------\n";
 
-            // Computer attacks the human
+            // Computer attacks the player's board
             bool hit = computerAttack(
                 computerTrackingBoard,
                 playerShipBoard,
-                playerFleet);
+                fleet);
 
-            // Display player's board after the attack
             cout << "\nYour ship board:\n";
-            playerShipBoard.print(playerFleet);
+            playerShipBoard.print(fleet);
 
-            // Check whether human has lost all ships
+            // Check if all player ships are destroyed
             if (!playerShipBoard.hasShipsRemaining()) {
 
                 cout << RED
@@ -139,21 +120,15 @@ int main() {
 
                 gameOver = true;
             }
-
-            // If hit, computer gets another turn
             else if (hit) {
 
                 cout << RED
-                    << "Computer hit! "
-                    << "Computer goes again!\n"
+                    << "Computer hit! Computer goes again!\n"
                     << RESET;
             }
-
-            // If miss, switch back to human turn
             else {
 
                 cout << "Computer missed! Your turn.\n";
-
                 playerTurn = true;
             }
         }
