@@ -1,166 +1,261 @@
+//Handle human player input and sinking announcements 
+
 #include "player.h"
+#include "Board.h"
+#include <limits> //Input validation
+using namespace std;
 
-// Function to initialize the game board with water ('~')
-void initializeBoard(char board[10][10]) {
-	for (int i = 0; i < 10; i++) {
-		for (int j = 0; j < 10; j++) {
-			board[i][j] = '~';
-		}
-	}
+// Announce when a ship has been completely destroyed
+void reportSunkShip(Ship fleet[5],
+    char shipSymbol,
+    bool computerFired) {
+
+    for (int i = 0; i < 5; i++) {
+
+        // Find the ship that was hit
+        if (fleet[i].name[0] == shipSymbol) {
+
+            // Increase the number of hits received
+            fleet[i].hits++;
+
+            // Check if all sections have been hit
+            if (fleet[i].hits == fleet[i].size &&
+                !fleet[i].isSunk) {
+
+                fleet[i].isSunk = true;
+
+                if (computerFired) {
+                    cout << RED
+                        << "The computer sank your "
+                        << fleet[i].name << "!\n"
+                        << RESET;
+                }
+                else {
+                    cout << GREEN
+                        << "You sank the enemy "
+                        << fleet[i].name << "!\n"
+                        << RESET;
+                }
+            }
+
+            break;
+        }
+    }
 }
 
-// Function to print the game board
-void printBoard(char board[10][10], Ship fleet[5]) {
-	cout << "   A B C D E F G H I J" << endl;
-	for (int i = 0; i < 10; i++) {
-		cout << setw(2) << i + 1 << " ";
-		for (int j = 0; j < 10; j++) {
-			char cell = board[i][j];
-			if (cell == '~') {
-				cout << CYAN << cell << RESET << " ";
-			}
-			else if (cell == 'X') {
-				cout << RED << cell << RESET << " ";
-			}
-			else if (cell == 'O') {
-				cout << RESET << cell << " ";
-			}
-			else {
-				string shipColor = RESET;
-				for (int k = 0; k < 5; k++) {
-					if (fleet[k].name[0] == cell) {
-						shipColor = fleet[k].color;
-						break;
-					}
-				}
-				cout << shipColor << cell << RESET << " ";
-			}
-		}
-		cout << endl;
-	}
+// Function to set up the human player's ships
+
+void boardSetup(Board& board, Ship fleet[5]) {
+
+    board.print(fleet);
+
+    for (int i = 0; i < 5; i++) {
+
+        bool placed = false;
+
+        // Keep asking until the current ship is placed
+        while (!placed) {
+
+            int row;
+            string columnInput;
+            char orientation;
+
+            cout << "\nPlace your " << fleet[i].name
+                << YELLOW
+                << " (size " << fleet[i].size << ")"
+                << RESET << endl;
+
+            // Get starting row
+            cout << "Enter starting row (1-10): ";
+
+            while (!(cin >> row) ||
+                row < 1 || row > 10) {
+
+                cout << RED
+                    << "Invalid row!\n"
+                    << RESET
+                    << "Enter 1-10: ";
+
+                if (cin.eof()) {
+                    return;
+                }
+
+                cin.clear();
+
+                cin.ignore(
+                    numeric_limits<streamsize>::max(),
+                    '\n');
+            }
+
+            // Convert to zero-based indexing
+            row--;
+
+            // Get starting column
+            cout << "Enter starting column (A-J): ";
+            cin >> columnInput;
+
+            // Keep asking until the player enters exactly one valid letter
+            while (columnInput.length() != 1 ||
+                toupper(columnInput[0]) < 'A' ||
+                toupper(columnInput[0]) > 'J') {
+
+                cout << RED
+                    << "Invalid column!\n"
+                    << RESET
+                    << "Enter a single letter from A to J: ";
+
+                cin >> columnInput;
+            }
+
+            // Convert column letter to an array index
+            int col = toupper(columnInput[0]) - 'A';
+
+
+            // Get ship orientation
+            cout << "Enter orientation (H or V): ";
+
+            if (!(cin >> orientation)) {
+                return;
+            }
+
+            // Validate orientation
+            while (toupper(orientation) != 'H' &&
+                toupper(orientation) != 'V') {
+
+                cout << RED
+                    << "Invalid orientation!\n"
+                    << RESET
+                    << "Enter H or V: ";
+
+                if (!(cin >> orientation)) {
+                    return;
+                }
+            }
+
+            // Ask the Board object to place the ship
+            placed = board.placeShip(
+                row, col, fleet[i], orientation);
+
+            // Inform the player if placement failed
+            if (!placed) {
+                cout << RED
+                    << "Invalid placement: "
+                    << "out of bounds or overlapping.\n"
+                    << RESET
+                    << "Choose another starting position.\n";
+            }
+        }
+
+        // Display the board after each ship is placed
+        cout << "\n";
+        board.print(fleet);
+    }
 }
 
-// Function to check if the ship placement is valid
-bool isValidPlacement(char board[10][10], int row, int col, int size, char orientation) {
-	if (toupper(orientation) != 'H' && toupper(orientation) != 'V') {
-		return false;
-	}
+// Function for the human player to attack
 
-	if (toupper(orientation) == 'H') {
-		for (int j = 0; j < size; j++) {
-			if (col + j >= 10 || board[row][col + j] == 'S') {
-				return false;
-			}
-		}
-	}
-	else if (toupper(orientation) == 'V') {
-		for (int j = 0; j < size; j++) {
-			if (row + j >= 10 || board[row + j][col] == 'S') {
-				return false;
-			}
-		}
-	}
+bool attack(Board& trackingBoard,
+    Board& opponentBoard,
+    Ship opponentFleet[5]) {
 
-	return true;
-}
+    // Continue until the player chooses an unused coordinate
+    while (true) {
 
-// Function to set up the player's board with ships
-void boardSetup(char board[10][10], Ship fleet[]) {
-	for (int i = 0; i < 5; i++) {
-		int row;
-		char colChar;
-		char orientation;
+        int row;
+        char columnLetter;
 
-		// Get row and reprompt if invalid input
-		cout << endl << "Place your " << fleet[i].name << YELLOW << " (size " << fleet[i].size << ")" << RESET << endl;
-		cout << "Enter starting row" << YELLOW << " (1-10): " << RESET;
-		while (!(cin >> row) || (row < 1 || row > 10)) {
-			cout << RED << "Invalid input!!!\n" << RESET << "Please enter a number between 1 and 10: ";
-			cin.clear();
-			cin.ignore(100, '\n');
-		}
-		row--; // Adjust for 0-based index
+        cout << "\nTime to attack!\n";
 
-		// Get column and reprompt if invalid input
-		cout << "\nEnter starting column" << YELLOW << " (A-J): " << RESET;
-		cin >> colChar;
-		while (toupper(colChar) < 'A' || toupper(colChar) > 'J') {
-			cout << RED << "Invalid input!!!\n" << RESET << "Please enter a letter between A and J: ";
-			cin.clear();
-			cin.ignore(100, '\n');
-			cin >> colChar;
-		}
-		int col = toupper(colChar) - 'A'; // Convert column letter to index
+        // Get target row
+        cout << "Enter target row (1-10): ";
 
-		bool placed = false;
-		while (!placed) {
-			cout << "\nEnter orientation" << YELLOW << " (H for horizontal, V for vertical): " << RESET;
-			cin >> orientation;
+        while (!(cin >> row) ||
+            row < 1 || row > 10) {
 
-			if (isValidPlacement(board, row, col, fleet[i].size, orientation)) {
-				char shipSymbol = fleet[i].name[0]; // 'C', 'B', 'D', 'S', or 'P'
-				if (toupper(orientation) == 'H') {
-					for (int j = 0; j < fleet[i].size; j++) {
-						board[row][col + j] = shipSymbol; // Mark ship position
-					}
-				}
-				else if (toupper(orientation) == 'V') {
-					for (int j = 0; j < fleet[i].size; j++) {
-						board[row + j][col] = shipSymbol; // Mark ship position
-					}
-				}
-				placed = true;
-			}
-			else {
-				cout << RED << "Invalid placement!\n" << RESET << "Out of bounds or overlapping another ship. Try again.";
-			}
-		}
+            cout << RED
+                << "Invalid row!\n"
+                << RESET
+                << "Enter 1-10: ";
 
-		cout << endl;
-		printBoard(board, fleet);
-	}
-}
+            if (cin.eof()) {
+                return false;
+            }
 
-void attack(char trackBoard[10][10], char attackBoard[10][10]) {
-	int shotRow;
-	char shotColChar;
+            cin.clear();
 
-	bool shotFired = false;
-	while (!shotFired) {
-		cout << endl << "Time to attack!!\nEnter target row" << YELLOW << " (1-10): " << RESET;
-		while (!(cin >> shotRow) || (shotRow < 1 || shotRow > 10)) {
-			cout << RED << "Invalid input!!!\n" << RESET << "Please enter a number between 1 and 10: ";
-			cin.clear();
-			cin.ignore(100, '\n');
-		}
-		shotRow--; //Adjust for 0-based index
+            cin.ignore(
+                numeric_limits<streamsize>::max(),
+                '\n');
+        }
 
-		cout << "\nEnter target column" << YELLOW << " (A-J): " << RESET;
-		cin >> shotColChar;
-		while (toupper(shotColChar) < 'A' || toupper(shotColChar) > 'J') {
-			cout << RED << "Invalid input!!!\n" << RESET << "Please enter a letter between A and J: ";
-			cin.clear();
-			cin.ignore(100, '\n');
-			cin >> shotColChar;
-		}
-		int shotCol = toupper(shotColChar) - 'A'; // Convert column letter to index
+        // Convert to zero-based indexing
+        row--;
 
-			
-		if (trackBoard[shotRow][shotCol] == '~') {
-			if (attackBoard[shotRow][shotCol] == 'S') {
-				cout << YELLOW << "Hit!\n" << RESET;
-				trackBoard[shotRow][shotCol] = 'X';
-				attackBoard[shotRow][shotCol] = 'X';
-			}
-			else {
-				cout << BLUE << "Miss!\n" << RESET;
-				trackBoard[shotRow][shotCol] = 'O';
-			}
-			shotFired = true;
-		}
+        // Get target column
+        cout << "Enter target column (A-J): ";
 
-		else {
-			cout << RED << "You already fired at that coordinate!" << RESET << " Try again.\n";
-		}
-	}
+        if (!(cin >> columnLetter)) {
+            return false;
+        }
+
+        // Validate column
+        while (toupper(columnLetter) < 'A' ||
+            toupper(columnLetter) > 'J') {
+
+            cout << RED
+                << "Invalid column!\n"
+                << RESET
+                << "Enter A-J: ";
+
+            if (!(cin >> columnLetter)) {
+                return false;
+            }
+        }
+
+        // Convert the letter to an array index
+        int col = toupper(columnLetter) - 'A';
+
+        // Check whether this position was already attacked
+        if (trackingBoard.wasAttacked(row, col)) {
+
+            cout << RED
+                << "You already fired at that coordinate!"
+                << " Try again.\n"
+                << RESET;
+
+            continue;
+        }
+
+        // Remember what was at the target position
+        char shipSymbol =
+            opponentBoard.getCell(row, col);
+
+        // Attack the opponent's ship board
+        bool hit =
+            opponentBoard.receiveAttack(row, col);
+
+        // Record the result on the tracking board
+        trackingBoard.markShot(row, col, hit);
+
+        // Display result
+        if (hit) {
+
+            cout << YELLOW
+                << "Hit!\n"
+                << RESET;
+
+            // Check whether this hit sank a ship
+            reportSunkShip(
+                opponentFleet, shipSymbol, false);
+        }
+        else {
+
+            cout << BLUE
+                << "Miss!\n"
+                << RESET;
+        }
+
+        // Return result to main.cpp
+        return hit;
+    }
 }
