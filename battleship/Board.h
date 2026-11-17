@@ -1,9 +1,8 @@
-/*Defines what a board object contains and what it is able to do.*/
 
 #pragma once
 #include "player.h"
 
-// A board owns a 10x10 grid and the operations on that grid.
+// Class that represents a 10x10 Battleship board
 class Board {
 private:
     char grid[10][10];

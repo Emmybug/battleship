@@ -1,88 +1,83 @@
-// Handles computer controlled decisions
 
 #include "computer.h"
-#include <cstdlib> // For rand() and srand()
+#include <cstdlib>
 
-// Randomly place the computer's five ships
-void placeComputerShips(Board& board, Ship fleet[5]) {
+// Function for the computer to attack the player's board
+bool computerAttack(Board& trackBoard,
+    Board& playerBoard,
+    Ship fleet[5]) {
 
-	for (int i = 0; i < 5; i++) {
+    int shotRow;
+    int shotCol;
 
-		bool placed = false;
+    // Generate random coordinates until an empty spot is found
+    do {
+        shotRow = rand() % 10;
+        shotCol = rand() % 10;
 
-		// Keep trying until the ship is placed
-		while (!placed) {
+    } while (trackBoard.wasAttacked(shotRow, shotCol));
 
-			//starting position
-			int row = rand() % 10;
-			int col = rand() % 10;
+    cout << "\nComputer attacks "
+        << char('A' + shotCol)
+        << shotRow + 1 << "!" << endl;
 
-			char orientation;
+    // Remember which ship was at the target before the attack
+    char shipSymbol =
+        playerBoard.getCell(shotRow, shotCol);
 
-			// Choose a random orientation
-			if (rand() % 2 == 0) {
-				orientation = 'H';
-			}
-			else {
-				orientation = 'V';
-			}
+    bool hit =
+        playerBoard.receiveAttack(shotRow, shotCol);
 
-			// Let the Board class attempt placement
-			placed = board.placeShip(
-				row, col, fleet[i], orientation);
-		}
-	}
+    trackBoard.markShot(shotRow, shotCol, hit);
 
-	cout << "\nComputer ships have been placed!\n";
+    // Check if the computer hit a ship
+    if (hit) {
+
+        cout << RED
+            << "Computer has hit your ship!\n"
+            << RESET;
+
+        reportSunkShip(fleet, shipSymbol, true);
+
+        return true;
+    }
+    else {
+
+        cout << BLUE
+            << "Computer has missed!\n"
+            << RESET;
+
+        return false;
+    }
 }
 
-// Function for the computer to attack
-bool computerAttack(Board& trackingBoard,
-	Board& playerBoard,
-	Ship playerFleet[5]) {
+// Function to randomly place the computer's ships
+void placeComputerShips(Board& board, Ship fleet[5]) {
 
-	int row;
-	int col;
+    for (int i = 0; i < 5; i++) {
 
-	// Generate unused random coordinates
-	do {
-		row = rand() % 10;
-		col = rand() % 10;
+        bool placed = false;
 
-	} while (trackingBoard.getCell(row, col) != WATER);
+        while (!placed) {
 
-	// Display the computer's chosen coordinate
-	cout << "\nComputer attacks "
-		<< char('A' + col)
-		<< row + 1
-		<< "!\n";
+            int row = rand() % 10;
+            int col = rand() % 10;
 
-	// Save the original character before the attack
-	char shipSymbol = playerBoard.getCell(row, col);
+            char orientation;
 
-	// Attack the human player's ship board
-	bool hit = playerBoard.receiveAttack(row, col);
+            // Randomly choose horizontal or vertical
+            if (rand() % 2 == 0) {
+                orientation = 'H';
+            }
+            else {
+                orientation = 'V';
+            }
 
-	// Record the result on the computer's tracking board
-	trackingBoard.markShot(row, col, hit);
+            // Check and place using the Board class
+            placed = board.placeShip(
+                row, col, fleet[i], orientation);
+        }
+    }
 
-	// Display result
-	if (hit) {
-
-		cout << RED
-			<< "Computer has hit your ship!\n"
-			<< RESET;
-
-		// Determine whether the computer sank a ship
-		reportSunkShip(
-			playerFleet, shipSymbol, true);
-	}
-	else {
-
-		cout << BLUE
-			<< "Computer has missed!\n"
-			<< RESET;
-	}
-
-	return hit;
+    cout << "\nComputer ships have been placed!\n";
 }
